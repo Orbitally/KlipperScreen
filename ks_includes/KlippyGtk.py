@@ -116,38 +116,27 @@ class KlippyGtk:
     def Image(self, image_name=None, width=None, height=None):
         if image_name is None:
             return Gtk.Image()
-        pixbuf = self.PixbufFromIcon(image_name, width, height)
-        return Gtk.Image.new_from_pixbuf(pixbuf) if pixbuf is not None else Gtk.Image()
-
-    def PixbufFromIcon(self, filename, width=None, height=None):
         width = width if width is not None else self.img_width
         height = height if height is not None else self.img_height
-        filename = os.path.join(self.themedir, filename)
+        filename = os.path.join(self.themedir, image_name)
         for ext in ["svg", "png"]:
-            pixbuf = self.PixbufFromFile(f"{filename}.{ext}", int(width), int(height))
-            if pixbuf is not None:
-                return pixbuf
-        return None
+            with contextlib.suppress(Exception):
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(f"{filename}.{ext}", int(width), int(height))
+                if pixbuf is not None:
+                    return Gtk.Image.new_from_pixbuf(pixbuf)
+        logging.error(f"Unable to find image {filename}.{ext}")
+        return Gtk.Image()
 
     @staticmethod
     def PixbufFromFile(filename, width=-1, height=-1):
-        try:
-            return GdkPixbuf.Pixbuf.new_from_file_at_size(filename, int(width), int(height))
-        except Exception as e:
-            logging.exception(e)
-            logging.error(f"Unable to find image {filename}")
-            return None
+        return GdkPixbuf.Pixbuf.new_from_file_at_size(filename, int(width), int(height))
 
     def PixbufFromHttp(self, resource, width=-1, height=-1):
         response = self.screen.apiclient.get_thumbnail_stream(resource)
         if response is False:
             return None
         stream = Gio.MemoryInputStream.new_from_data(response, None)
-        try:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_stream_at_scale(stream, int(width), int(height), True)
-        except Exception as e:
-            logging.exception(e)
-            return None
+        pixbuf = GdkPixbuf.Pixbuf.new_from_stream_at_scale(stream, int(width), int(height), True)
         stream.close_async(2)
         return pixbuf
 

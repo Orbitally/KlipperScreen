@@ -43,7 +43,7 @@ install_packages()
     echo_text "Checking for broken packages..."
     output=$(dpkg-query -W -f='${db:Status-Abbrev} ${binary:Package}\n' | grep -E ^.[^nci])
     if [ $? -eq 0 ]; then
-        echo_text "Detected broken packages. Attempting to fix"
+        echo_text "Detectected broken pacakges. Attempting to fix"
         sudo apt-get -f install
         output=$(dpkg-query -W -f='${db:Status-Abbrev} ${binary:Package}\n' | grep -E ^.[^nci])
         if [ $? -eq 0 ]; then
@@ -73,16 +73,16 @@ install_packages()
     fi
     sudo apt-get install -y $PYTHON
     if [ $? -eq 0 ]; then
-        echo_ok "Installed Python dependencies"
+        echo_ok "Installed Python dependincies"
     else
-        echo_error "Installation of Python dependencies failed ($PYTHON)"
+        echo_error "Installation of Python dependincies failed ($PYTHON)"
         exit 1
     fi
     sudo apt-get install -y $PYGOBJECT
     if [ $? -eq 0 ]; then
-        echo_ok "Installed PyGobject dependencies"
+        echo_ok "Installed PyGobject dependincies"
     else
-        echo_error "Installation of PyGobject dependencies failed ($PYGOBJECT)"
+        echo_error "Installation of PyGobject dependincies failed ($PYGOBJECT)"
         exit 1
     fi
     sudo apt-get install -y $MISC
@@ -168,7 +168,6 @@ add_desktop_file()
     DESKTOP=$(<$SCRIPTPATH/KlipperScreen.desktop)
     mkdir -p $HOME/.local/share/applications/
     echo "$DESKTOP" | tee $HOME/.local/share/applications/KlipperScreen.desktop > /dev/null
-    sudo cp $SCRIPTPATH/../styles/icon.svg /usr/share/icons/hicolor/scalable/apps/KlipperScreen.svg
 }
 
 start_KlipperScreen()
@@ -178,7 +177,7 @@ start_KlipperScreen()
     sudo systemctl start KlipperScreen
 }
 if [ "$EUID" == 0 ]
-    then echo_error "Please do not run this script as root"
+    then echo_error "Plaease do not run this script as root"
     exit 1
 fi
 install_packages

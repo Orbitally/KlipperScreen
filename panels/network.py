@@ -115,7 +115,6 @@ class NetworkPanel(ScreenPanel):
             self.add_network(net, False)
         self.update_all_networks()
         self.content.show_all()
-        return False
 
     def add_network(self, ssid, show=True):
 
@@ -429,7 +428,6 @@ class NetworkPanel(ScreenPanel):
 
         self.labels['networkinfo'].set_markup(connected)
         self.labels['networkinfo'].show_all()
-        return True
 
     def reload_networks(self, widget=None):
         self.networks = {}

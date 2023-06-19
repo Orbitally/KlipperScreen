@@ -10,47 +10,47 @@ from ks_includes.widgets.heatergraph import HeaterGraph
 from ks_includes.widgets.keypad import Keypad
 
 
-def create_panel(*args, **kwargs):
-    return MainPanel(*args, **kwargs)
+def create_panel(*args):
+    return MainPanel(*args)
 
 
 class MainPanel(MenuPanel):
-    def __init__(self, screen, title, items=None):
-        super().__init__(screen, title, items)
-        self.graph_retry_timeout = None
+    def __init__(self, screen, title):
+        super().__init__(screen, title)
         self.left_panel = None
+        self.items = None
         self.devices = {}
         self.graph_update = None
         self.active_heater = None
         self.h = 1
-        self.main_menu = self._gtk.HomogeneousGrid()
-        self.main_menu.set_hexpand(True)
-        self.main_menu.set_vexpand(True)
-        self.graph_retry = 0
+        self.grid = self._gtk.HomogeneousGrid()
+        self.grid.set_hexpand(True)
+        self.grid.set_vexpand(True)
 
+    def initialize(self, items):
         logging.info("### Making MainMenu")
 
+        self.items = items
+        self.create_menu_items()
         stats = self._printer.get_printer_status_data()["printer"]
+        grid = self._gtk.HomogeneousGrid()
         if stats["temperature_devices"]["count"] > 0 or stats["extruders"]["count"] > 0:
             self._gtk.reset_temp_color()
-            self.main_menu.attach(self.create_left_panel(), 0, 0, 1, 1)
+            grid.attach(self.create_left_panel(), 0, 0, 1, 1)
+        else:
+            self.graph_update = False
         if self._screen.vertical_mode:
             self.labels['menu'] = self.arrangeMenuItems(items, 3, True)
-            self.main_menu.attach(self.labels['menu'], 0, 1, 1, 1)
+            grid.attach(self.labels['menu'], 0, 1, 1, 1)
         else:
             self.labels['menu'] = self.arrangeMenuItems(items, 2, True)
-            self.main_menu.attach(self.labels['menu'], 1, 0, 1, 1)
-        self.content.add(self.main_menu)
+            grid.attach(self.labels['menu'], 1, 0, 1, 1)
+        self.grid = grid
+        self.content.add(self.grid)
 
     def update_graph_visibility(self):
         if self.left_panel is None or not self._printer.get_temp_store_devices():
-            self.graph_retry += 1
-            if self.graph_retry < 5:
-                if self.graph_retry_timeout is None:
-                    self.graph_retry_timeout = GLib.timeout_add_seconds(5, self.update_graph_visibility)
-            else:
-                logging.debug(f"Could not create graph {self.left_panel} {self._printer.get_temp_store_devices()}")
-            return False
+            return
         count = 0
         for device in self.devices:
             visible = self._config.get_config().getboolean(f"graph {self._screen.connected_printer}",
@@ -69,28 +69,21 @@ class MainPanel(MenuPanel):
                 self.left_panel.add(self.labels['da'])
             self.labels['da'].queue_draw()
             self.labels['da'].show()
-            if self.graph_update is None:
-                # This has a high impact on load
-                self.graph_update = GLib.timeout_add_seconds(5, self.update_graph)
         elif self.labels['da'] in self.left_panel:
             self.left_panel.remove(self.labels['da'])
-            if self.graph_update is not None:
-                GLib.source_remove(self.graph_update)
-                self.graph_update = None
-        self.graph_retry = 0
-        return False
 
     def activate(self):
+        # For this case False != None
+        if self.graph_update is None:
+            # This has a high impact on load
+            self.graph_update = GLib.timeout_add_seconds(5, self.update_graph)
         self.update_graph_visibility()
         self._screen.base_panel_show_all()
 
     def deactivate(self):
-        if self.graph_update is not None:
+        if self.graph_update:
             GLib.source_remove(self.graph_update)
             self.graph_update = None
-        if self.graph_retry_timeout is not None:
-            GLib.source_remove(self.graph_retry_timeout)
-            self.graph_retry_timeout = None
         if self.active_heater is not None:
             self.hide_numpad()
 
@@ -213,7 +206,7 @@ class MainPanel(MenuPanel):
         self.labels['devices'].get_style_context().add_class('heater-grid')
         self.labels['devices'].set_vexpand(False)
 
-        name = Gtk.Label(label="")
+        name = Gtk.Label("")
         temp = Gtk.Label(_("Temp (°C)"))
         temp.get_style_context().add_class("heater-grid-temp")
 
@@ -240,12 +233,12 @@ class MainPanel(MenuPanel):
         self.active_heater = None
 
         if self._screen.vertical_mode:
-            self.main_menu.remove_row(1)
-            self.main_menu.attach(self.labels['menu'], 0, 1, 1, 1)
+            self.grid.remove_row(1)
+            self.grid.attach(self.labels['menu'], 0, 1, 1, 1)
         else:
-            self.main_menu.remove_column(1)
-            self.main_menu.attach(self.labels['menu'], 1, 0, 1, 1)
-        self.main_menu.show_all()
+            self.grid.remove_column(1)
+            self.grid.attach(self.labels['menu'], 1, 0, 1, 1)
+        self.grid.show_all()
 
     def process_update(self, action, data):
         if action != "notify_status_update":
@@ -257,7 +250,6 @@ class MainPanel(MenuPanel):
                 self._printer.get_dev_stat(x, "target"),
                 self._printer.get_dev_stat(x, "power"),
             )
-        return False
 
     def show_numpad(self, widget, device):
 
@@ -271,12 +263,12 @@ class MainPanel(MenuPanel):
         self.labels["keypad"].clear()
 
         if self._screen.vertical_mode:
-            self.main_menu.remove_row(1)
-            self.main_menu.attach(self.labels["keypad"], 0, 1, 1, 1)
+            self.grid.remove_row(1)
+            self.grid.attach(self.labels["keypad"], 0, 1, 1, 1)
         else:
-            self.main_menu.remove_column(1)
-            self.main_menu.attach(self.labels["keypad"], 1, 0, 1, 1)
-        self.main_menu.show_all()
+            self.grid.remove_column(1)
+            self.grid.attach(self.labels["keypad"], 1, 0, 1, 1)
+        self.grid.show_all()
 
     def update_graph(self):
         self.labels['da'].queue_draw()
